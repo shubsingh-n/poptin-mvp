@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -22,7 +22,7 @@ interface Popup {
   createdAt: string;
 }
 
-export default function PopupsPage() {
+function PopupsContent() {
   const searchParams = useSearchParams();
   const siteIdParam = searchParams.get('siteId');
   
@@ -207,6 +207,14 @@ export default function PopupsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PopupsPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-12">Loading...</div>}>
+      <PopupsContent />
+    </Suspense>
   );
 }
 

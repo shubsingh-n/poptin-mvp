@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import PopupPreview from '@/components/PopupPreview';
 import PopupBuilderForm from '@/components/PopupBuilderForm';
@@ -32,7 +32,7 @@ interface Site {
   siteId: string;
 }
 
-export default function PopupBuilderPage() {
+function PopupBuilderContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -190,6 +190,14 @@ export default function PopupBuilderPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PopupBuilderPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-12">Loading...</div>}>
+      <PopupBuilderContent />
+    </Suspense>
   );
 }
 
