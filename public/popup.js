@@ -8,18 +8,26 @@
 (function () {
   'use strict';
 
+  // Log script initialization
+  console.log('%c🚀 Poptin Script', 'color: #007bff; font-weight: bold; font-size: 14px;');
+  console.log('%cScript loaded successfully!', 'color: #28a745; font-weight: bold;');
+
   // Get site ID from script tag
   const scriptTag = document.currentScript || document.querySelector('script[data-site-id]');
   const siteId = scriptTag?.getAttribute('data-site-id');
 
   if (!siteId) {
-    console.error('Poptin: Site ID is required. Add data-site-id attribute to the script tag.');
+    console.error('%c❌ Poptin Error:', 'color: #dc3545; font-weight: bold;', 'Site ID is required. Add data-site-id attribute to the script tag.');
     return;
   }
+
+  console.log('%c✓ Site ID detected:', 'color: #28a745;', siteId);
 
   // Get the origin (protocol + host) from the script src
   const scriptSrc = scriptTag?.src || '';
   const origin = scriptSrc.substring(0, scriptSrc.lastIndexOf('/'));
+  
+  console.log('%c✓ API Origin:', 'color: #28a745;', origin);
 
   // State
   let popupConfig = null;
@@ -33,16 +41,25 @@
    */
   async function fetchPopupConfig() {
     try {
+      console.log('%c⏳ Fetching popup configuration...', 'color: #ffc107;');
       const response = await fetch(`${origin}/api/embed/${siteId}`);
       const data = await response.json();
 
       if (data.success && data.data) {
         popupConfig = data.data;
+        console.log('%c✓ Popup configuration loaded!', 'color: #28a745; font-weight: bold;');
+        console.log('%c  Title:', 'color: #6c757d;', popupConfig.title);
+        console.log('%c  Triggers:', 'color: #6c757d;', {
+          timeDelay: popupConfig.triggers?.timeDelay || 'disabled',
+          exitIntent: popupConfig.triggers?.exitIntent ? 'enabled' : 'disabled'
+        });
         return true;
+      } else {
+        console.warn('%c⚠ No active popup found for this site', 'color: #ffc107;');
+        return false;
       }
-      return false;
     } catch (error) {
-      console.error('Poptin: Error fetching popup config:', error);
+      console.error('%c❌ Poptin Error:', 'color: #dc3545; font-weight: bold;', 'Error fetching popup config:', error);
       return false;
     }
   }
@@ -234,6 +251,7 @@
     if (overlay) {
       document.body.appendChild(overlay);
       popupShown = true;
+      console.log('%c🎯 Popup displayed!', 'color: #28a745; font-weight: bold;');
       trackEvent('view');
 
       // Close on overlay click (outside popup)
@@ -328,35 +346,47 @@
   async function init() {
     // Wait for DOM to be ready
     if (document.readyState === 'loading') {
+      console.log('%c⏳ Waiting for DOM to be ready...', 'color: #6c757d;');
       document.addEventListener('DOMContentLoaded', init);
       return;
     }
+
+    console.log('%c✓ DOM is ready', 'color: #28a745;');
 
     // Fetch popup configuration
     const configLoaded = await fetchPopupConfig();
 
     if (!configLoaded || !popupConfig) {
+      console.warn('%c⚠ Poptin script is loaded but no active popup found', 'color: #ffc107;');
       return; // No active popup or error loading config
     }
 
     // Setup exit intent if enabled
     if (popupConfig.triggers?.exitIntent) {
       setupExitIntent();
+      console.log('%c✓ Exit intent trigger enabled', 'color: #28a745;');
     }
 
     // Setup time delay if enabled
     if (popupConfig.triggers?.timeDelay !== null && popupConfig.triggers?.timeDelay !== undefined) {
       const delay = popupConfig.triggers.timeDelay * 1000; // Convert to milliseconds
+      console.log(`%c✓ Time delay trigger set: ${popupConfig.triggers.timeDelay} seconds`, 'color: #28a745;');
       timeDelayTimer = setTimeout(() => {
         showPopup();
       }, delay);
     } else {
       // If no triggers are set, show immediately
+      console.log('%c✓ No delay configured, popup will show immediately', 'color: #28a745;');
       showPopup();
     }
+
+    // Final status
+    console.log('%c✅ Poptin is ACTIVE and ready!', 'color: #28a745; font-weight: bold; font-size: 12px;');
+    console.log('%c   Popup will appear based on configured triggers', 'color: #6c757d; font-size: 11px;');
   }
 
   // Start initialization
+  console.log('%c🔄 Initializing Poptin...', 'color: #007bff;');
   init();
 })();
 
