@@ -3,6 +3,20 @@ import connectDB from '@/lib/mongodb';
 import Lead from '@/models/Lead';
 import Event from '@/models/Event';
 
+// CORS headers for cross-origin requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+/**
+ * Handle OPTIONS request for CORS preflight
+ */
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 /**
  * GET /api/leads
  * Fetch all leads with optional filtering
@@ -20,12 +34,12 @@ export async function GET(request: NextRequest) {
 
     const leads = await Lead.find(query).sort({ createdAt: -1 });
 
-    return NextResponse.json({ success: true, data: leads }, { status: 200 });
+    return NextResponse.json({ success: true, data: leads }, { status: 200, headers: corsHeaders });
   } catch (error) {
     console.error('Error fetching leads:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch leads' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
@@ -43,7 +57,7 @@ export async function POST(request: NextRequest) {
     if (!siteId || !popupId || !email) {
       return NextResponse.json(
         { success: false, error: 'Site ID, popup ID, and email are required' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -52,7 +66,7 @@ export async function POST(request: NextRequest) {
     if (!emailRegex.test(email)) {
       return NextResponse.json(
         { success: false, error: 'Invalid email format' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -64,7 +78,7 @@ export async function POST(request: NextRequest) {
       if (error.code === 11000) {
         return NextResponse.json(
           { success: false, error: 'Email already submitted for this popup' },
-          { status: 400 }
+          { status: 400, headers: corsHeaders }
         );
       }
       throw error;
@@ -77,12 +91,12 @@ export async function POST(request: NextRequest) {
       type: 'conversion',
     });
 
-    return NextResponse.json({ success: true, data: lead }, { status: 201 });
+    return NextResponse.json({ success: true, data: lead }, { status: 201, headers: corsHeaders });
   } catch (error) {
     console.error('Error creating lead:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to create lead' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Event from '@/models/Event';
 
+// CORS headers for cross-origin requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+/**
+ * Handle OPTIONS request for CORS preflight
+ */
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 /**
  * GET /api/events
  * Fetch events with optional filtering
@@ -21,12 +35,12 @@ export async function GET(request: NextRequest) {
 
     const events = await Event.find(query).sort({ createdAt: -1 });
 
-    return NextResponse.json({ success: true, data: events }, { status: 200 });
+    return NextResponse.json({ success: true, data: events }, { status: 200, headers: corsHeaders });
   } catch (error) {
     console.error('Error fetching events:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch events' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
@@ -44,25 +58,25 @@ export async function POST(request: NextRequest) {
     if (!siteId || !popupId || !type) {
       return NextResponse.json(
         { success: false, error: 'Site ID, popup ID, and type are required' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
     if (!['view', 'conversion'].includes(type)) {
       return NextResponse.json(
         { success: false, error: 'Invalid event type' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
     const event = await Event.create({ siteId, popupId, type });
 
-    return NextResponse.json({ success: true, data: event }, { status: 201 });
+    return NextResponse.json({ success: true, data: event }, { status: 201, headers: corsHeaders });
   } catch (error) {
     console.error('Error creating event:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to create event' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
