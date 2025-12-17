@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
+// Force dynamic rendering to prevent prerender errors
+export const dynamic = 'force-dynamic';
+
 interface Lead {
   _id: string;
   siteId: string;

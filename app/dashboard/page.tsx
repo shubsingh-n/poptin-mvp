@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+// Force dynamic rendering to prevent prerender errors
+export const dynamic = 'force-dynamic';
+
 interface Stats {
   totalSites: number;
   totalPopups: number;

@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
+// Force dynamic rendering to prevent prerender errors
+export const dynamic = 'force-dynamic';
+
 interface Site {
   _id: string;
   name: string;

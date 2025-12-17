@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import PopupPreview from '@/components/PopupPreview';
 import PopupBuilderForm from '@/components/PopupBuilderForm';
+
+// Force dynamic rendering to prevent prerender errors
+export const dynamic = 'force-dynamic';
 
 interface Popup {
   _id: string;
@@ -32,6 +35,7 @@ interface Site {
 export default function PopupBuilderPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const popupId = params.id as string;
   const isNew = popupId === 'new';
 
@@ -60,14 +64,13 @@ export default function PopupBuilderPage() {
     if (!isNew) {
       fetchPopup();
     } else {
-      const searchParams = new URLSearchParams(window.location.search);
       const siteId = searchParams.get('siteId');
       if (siteId) {
         setFormData((prev) => ({ ...prev, siteId }));
       }
       setLoading(false);
     }
-  }, [popupId, isNew]);
+  }, [popupId, isNew, searchParams]);
 
   const fetchSites = async () => {
     try {

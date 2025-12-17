@@ -5,6 +5,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import PopupPreview from '@/components/PopupPreview';
 import PopupBuilderForm from '@/components/PopupBuilderForm';
 
+// Force dynamic rendering to prevent prerender errors
+export const dynamic = 'force-dynamic';
+
 interface Site {
   _id: string;
   name: string;
