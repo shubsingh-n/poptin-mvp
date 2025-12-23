@@ -846,14 +846,13 @@
       const formData = new FormData(form);
       const data = Object.fromEntries(formData.entries());
       // Track conversion view
-      const popupConfig = window.PopupMax.popups.find(p => p._id === popupId);
-      if (popupConfig) {
-        // Increment conversion needed? API needed?
-        // For now just log
-        console.log('PopupMax Conversion:', data);
-      }
+      console.log('PopupMax Conversion:', data);
 
-      alert('Sent! (Demo Mode)');
+      // Handle actual submit?
+      handleSubmit({
+        preventDefault: () => { },
+        target: form
+      });
       closePopup();
     }
   }
@@ -901,6 +900,12 @@
     if (popupElement && popupElement.parentNode) {
       popupElement.parentNode.removeChild(popupElement);
       popupElement = null;
+      popupShown = false;
+
+      // Re-check for teaser if needed
+      if (popupConfig?.settings?.overState?.enabled) {
+        checkTriggers();
+      }
     }
   }
 

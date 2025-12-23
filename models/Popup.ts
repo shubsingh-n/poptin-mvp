@@ -137,6 +137,7 @@ const PopupSchema: Schema = new Schema(
     components: [{
       id: { type: String, required: true },
       type: { type: String, required: true }, // 'text', 'button', 'image', etc.
+      pageIndex: { type: Number, default: 0 }, // Step/Page number
       label: { type: String, default: '' }, // For internal labeling
       content: { type: Schema.Types.Mixed, default: {} }, // text content, image src, placeholder, etc.
       style: { type: Schema.Types.Mixed, default: {} }, // Specific styles for this component
