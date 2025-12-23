@@ -37,7 +37,7 @@
   let timeDelayTimer = null;
   let exitIntentBound = false;
   let teaserDelayTimer = null;
-  let popupFilled = localStorage.getItem('popup_max_filled') === 'true';
+  let popupFilled = sessionStorage.getItem('popup_max_filled') === 'true';
   let currentLeadId = null;
   const SUBMIT_KEY_PREFIX = 'popup_max_submitted_';
 
@@ -100,20 +100,17 @@
   const VISITS_KEY = 'popup_max_visits';
 
   function initVisitorTracking() {
-    let visitorId = localStorage.getItem(VISITOR_KEY);
+    let visitorId = sessionStorage.getItem(VISITOR_KEY);
     if (!visitorId) {
       visitorId = 'v_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem(VISITOR_KEY, visitorId);
+      sessionStorage.setItem(VISITOR_KEY, visitorId);
     }
 
-    let visits = parseInt(localStorage.getItem(VISITS_KEY) || '0');
+    let visits = parseInt(sessionStorage.getItem(VISITS_KEY) || '0');
 
-    // Check if this is a new session (simple check: if referrer is external or empty, or time gap)
-    // For simplicity in MVP, we increment on every page load (acting as "views")
-    // A better approach would be session-based using sessionStorage
     if (!sessionStorage.getItem('popup_max_session_active')) {
       visits++;
-      localStorage.setItem(VISITS_KEY, visits.toString());
+      sessionStorage.setItem(VISITS_KEY, visits.toString());
       sessionStorage.setItem('popup_max_session_active', 'true');
     }
 
@@ -133,42 +130,37 @@
   function checkTriggers() {
     if (popupShown) return;
 
-    // Safety check: Don't show if already submitted
-    if (localStorage.getItem(SUBMIT_KEY_PREFIX + popupConfig.popupId)) {
-      console.log('%c⊘ Popup already submitted, skipping.', 'color: #6c757d;');
-      return;
-    }
-
     const triggers = popupConfig.triggers || {};
     const settings = popupConfig.settings || {};
+    const isSubmitted = sessionStorage.getItem(SUBMIT_KEY_PREFIX + popupConfig.popupId);
 
-    // --- 1. Visitor Rules ---
+    // --- 1. Visitor Tracking ---
     const { visits } = initVisitorTracking();
     const visitorType = triggers.visitorType || 'all';
     const requiredCount = triggers.visitorCount || 0;
 
+    let isPopupAllowed = !isSubmitted;
+
     // "Unique" Rule: Once per session
-    if (visitorType === 'unique') {
+    if (isPopupAllowed && visitorType === 'unique') {
       if (sessionStorage.getItem('popup_max_shown_' + popupConfig.popupId)) {
         console.log('%c⊘ Unique visitor already saw the popup in this session', 'color: #6c757d;');
-        return;
+        isPopupAllowed = false;
       }
     }
 
-    if (visitorType === 'repeater' && visits <= 1) {
+    if (isPopupAllowed && visitorType === 'repeater' && visits <= 1) {
       console.log('%c⊘ Visitor is not a repeater (Visit #' + visits + ')', 'color: #6c757d;');
-      return;
-    }
-    // Specific visit count trigger (e.g. only on 4th visit)
-    if (requiredCount > 0 && visits !== requiredCount) {
-      console.log('%c⊘ Visit count mismatch (Current: ' + visits + ', Required: ' + requiredCount + ')', 'color: #6c757d;');
-      return;
+      isPopupAllowed = false;
     }
 
+    // Specific visit count trigger (e.g. only on 4th visit)
+    if (isPopupAllowed && requiredCount > 0 && visits !== requiredCount) {
+      console.log('%c⊘ Visit count mismatch (Current: ' + visits + ', Required: ' + requiredCount + ')', 'color: #6c757d;');
+      isPopupAllowed = false;
+    }
 
     // --- 2. Page/Content Targeting ---
-    let shouldShow = false;
-
     // Helper for match types
     const matches = (actual, ruleValue, matchType) => {
       if (!actual && actual !== 0 && actual !== false) return false;
@@ -188,20 +180,14 @@
       }
     };
 
-    // URL Targeting
     const urlRules = triggers.pageUrl || [];
     const urlMatch = urlRules.length === 0 || urlRules.some(rule => matches(window.location.pathname, rule.value, rule.matchType));
-
-    // Title Targeting
     const titleRules = triggers.pageTitle || [];
     const titleMatch = titleRules.length === 0 || titleRules.some(rule => matches(document.title, rule.value, rule.matchType));
-
-    // JS Variable Targeting
     const jsRules = triggers.jsVariable || [];
     const jsMatch = jsRules.length === 0 || jsRules.some(rule => {
       const actual = window[rule.name];
-      if (typeof actual === 'undefined') return false;
-      return matches(actual, rule.value, rule.matchType);
+      return typeof actual !== 'undefined' && matches(actual, rule.value, rule.matchType);
     });
 
     if (!urlMatch || !titleMatch || !jsMatch) {
@@ -210,81 +196,84 @@
     }
 
     // --- 3. Dynamic Triggers (Events) ---
-    let hasEventTriggers = false;
+    if (isPopupAllowed) {
+      let hasEventTriggers = false;
 
-    // Time Delay
-    if (triggers.timeDelay !== null && triggers.timeDelay !== undefined && triggers.timeDelay > 0) {
-      hasEventTriggers = true;
-      setTimeout(() => showPopup(), triggers.timeDelay * 1000);
-    }
+      if (triggers.timeDelay > 0) {
+        hasEventTriggers = true;
+        setTimeout(() => showPopup(), triggers.timeDelay * 1000);
+      }
 
-    // Scroll Percentage
-    if (triggers.scrollPercentage > 0) {
-      hasEventTriggers = true;
-      const scrollHandler = () => {
-        const scrollPercent = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
-        if (scrollPercent >= triggers.scrollPercentage) {
-          showPopup();
-          window.removeEventListener('scroll', scrollHandler);
-        }
-      };
-      window.addEventListener('scroll', scrollHandler);
-    }
+      if (triggers.scrollPercentage > 0) {
+        hasEventTriggers = true;
+        const scrollHandler = () => {
+          const scrollPercent = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+          if (scrollPercent >= triggers.scrollPercentage) {
+            showPopup();
+            window.removeEventListener('scroll', scrollHandler);
+          }
+        };
+        window.addEventListener('scroll', scrollHandler);
+      }
 
-    // Click Trigger (New & Legacy)
-    // Support usage of #my-button in the "clickTrigger" field
-    const clickSelector = triggers.clickTrigger || triggers.clickElement;
-    if (clickSelector) {
-      hasEventTriggers = true;
-      console.log('%c✓ Waiting for click on: ' + clickSelector, 'color: #28a745;');
+      const clickSelector = triggers.clickTrigger || triggers.clickElement;
+      if (clickSelector) {
+        hasEventTriggers = true;
+        document.addEventListener('click', (e) => {
+          if (e.target.closest(clickSelector)) {
+            e.preventDefault();
+            showPopup();
+          }
+        });
+      }
 
-      // Use event delegation to handle dynamic elements
-      document.addEventListener('click', (e) => {
-        if (e.target.closest(clickSelector)) {
-          e.preventDefault(); // Optional: prevent default if it's a link? Defaulting to yes for triggers.
-          showPopup();
-        }
-      });
-    }
+      if (triggers.inactivityTime > 0) {
+        hasEventTriggers = true;
+        let inactivityTimer;
+        const resetInactivity = () => {
+          if (popupShown) return;
+          clearTimeout(inactivityTimer);
+          inactivityTimer = setTimeout(() => showPopup(), triggers.inactivityTime * 1000);
+        };
+        ['mousemove', 'keypress', 'scroll', 'click'].forEach(evt => document.addEventListener(evt, resetInactivity));
+        resetInactivity();
+      }
 
-    // Inactivity
-    if (triggers.inactivityTime > 0) {
-      hasEventTriggers = true;
-      let inactivityTimer;
-      const resetInactivity = () => {
-        if (popupShown) return;
-        clearTimeout(inactivityTimer);
-        inactivityTimer = setTimeout(() => showPopup(), triggers.inactivityTime * 1000);
-      };
-      ['mousemove', 'keypress', 'scroll', 'click'].forEach(evt =>
-        document.addEventListener(evt, resetInactivity)
-      );
-      resetInactivity();
-    }
+      if (triggers.exitIntent) {
+        hasEventTriggers = true;
+        setupExitIntent();
+      }
 
-    // Exit Intent matches existing logic but verified here too
-    if (triggers.exitIntent) {
-      hasEventTriggers = true;
-      setupExitIntent();
-    }
-
-    // If no event triggers, show immediately (if targeting matched)
-    if (!hasEventTriggers) {
-      showPopup();
+      if (!hasEventTriggers) {
+        showPopup();
+      }
+    } else {
+      console.log('%c⊘ Popup blocked by frequency or submission rules, but checking teaser.', 'color: #6c757d;');
     }
 
     // --- 4. Over-state (Teaser) Logic ---
     if (settings.overState?.enabled) {
-      const teaserTriggers = settings.overState.triggers || {};
+      const overState = settings.overState;
+      const teaserTriggers = overState.triggers || {};
       const displayMode = teaserTriggers.displayMode || 'always';
 
       const initTeaser = () => {
         if (popupShown) return;
-        if (displayMode === 'closed_not_filled' && popupFilled) return;
 
-        if (displayMode === 'after_delay' && teaserTriggers.delay > 0) {
+        // "Always" means show even if popup is already shown/submitted in this session
+        if (displayMode === 'always') {
+          showTeaser();
+          return;
+        }
+
+        // Logic for closed/not filled
+        if (displayMode === 'closed_not_filled') {
+          if (isSubmitted || popupFilled) return;
+          showTeaser();
+        } else if (displayMode === 'after_delay' && teaserTriggers.delay > 0) {
+          if (!isPopupAllowed) return; // Only show teaser if popup was allowed but not yet triggered
           teaserDelayTimer = setTimeout(() => showTeaser(), teaserTriggers.delay * 1000);
-        } else {
+        } else if (isPopupAllowed) {
           showTeaser();
         }
       };
@@ -889,7 +878,8 @@
         }
       } else {
         // Complete Submission
-        localStorage.setItem(SUBMIT_KEY_PREFIX + popupId, 'true');
+        sessionStorage.setItem(SUBMIT_KEY_PREFIX + popupId, 'true');
+        sessionStorage.setItem('popup_max_filled', 'true');
         closePopup();
         alert('Thank you for your submission!');
       }
@@ -988,6 +978,8 @@
       const data = await response.json();
 
       if (data.success) {
+        sessionStorage.setItem(SUBMIT_KEY_PREFIX + popupConfig.popupId, 'true');
+        sessionStorage.setItem('popup_max_filled', 'true');
         // Show success message
         const popup = document.getElementById('popup-max-popup');
         if (popup) {
