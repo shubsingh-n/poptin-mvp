@@ -2,32 +2,8 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import PopupPreview from '@/components/PopupPreview';
-import PopupBuilderForm from '@/components/PopupBuilderForm';
-
-interface Popup {
-  _id: string;
-  siteId: string;
-  title: string;
-  description: string;
-  ctaText: string;
-  styles: {
-    backgroundColor: string;
-    textColor: string;
-    buttonColor: string;
-  };
-  triggers: {
-    timeDelay?: number | null;
-    exitIntent: boolean;
-  };
-  isActive: boolean;
-}
-
-interface Site {
-  _id: string;
-  name: string;
-  siteId: string;
-}
+import DragAndDropBuilder from '@/components/builder/DragAndDropBuilder';
+import { PopupComponent, PopupSettings } from '@/types/builder';
 
 function PopupBuilderContent() {
   const params = useParams();
@@ -36,156 +12,103 @@ function PopupBuilderContent() {
   const popupId = params.id as string;
   const isNew = popupId === 'new';
 
-  const [popup, setPopup] = useState<Popup | null>(null);
-  const [sites, setSites] = useState<Site[]>([]);
-  const [loading, setLoading] = useState(!isNew);
-  const [formData, setFormData] = useState({
-    siteId: '',
-    title: '',
-    description: '',
-    ctaText: 'Subscribe',
-    styles: {
-      backgroundColor: '#ffffff',
-      textColor: '#000000',
-      buttonColor: '#007bff',
-    },
-    triggers: {
-      timeDelay: null as number | null,
-      exitIntent: false,
-    },
-    isActive: true,
-  });
+  const [loading, setLoading] = useState(true);
+  const [siteId, setSiteId] = useState<string>('');
+
+  // State for builder
+  const [initialComponents, setInitialComponents] = useState<PopupComponent[]>([]);
+  const [initialSettings, setInitialSettings] = useState<Partial<PopupSettings>>({});
+  const [initialTitle, setInitialTitle] = useState('My Popup');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    fetchSites();
-    if (!isNew) {
-      fetchPopup();
-    } else {
-      const siteId = searchParams.get('siteId');
-      if (siteId) {
-        setFormData((prev) => ({ ...prev, siteId }));
-      }
+    if (isNew) {
+      const sid = searchParams.get('siteId');
+      if (sid) setSiteId(sid);
       setLoading(false);
+    } else {
+      fetchPopup();
     }
   }, [popupId, isNew, searchParams]);
-
-  const fetchSites = async () => {
-    try {
-      const res = await fetch('/api/sites');
-      const data = await res.json();
-      if (data.success) {
-        setSites(data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching sites:', error);
-    }
-  };
 
   const fetchPopup = async () => {
     try {
       const res = await fetch(`/api/popups/${popupId}`);
       const data = await res.json();
       if (data.success) {
-        setPopup(data.data);
-        setFormData({
-          siteId: data.data.siteId,
-          title: data.data.title,
-          description: data.data.description,
-          ctaText: data.data.ctaText,
-          styles: data.data.styles,
-          triggers: data.data.triggers,
-          isActive: data.data.isActive,
-        });
+        setSiteId(data.data.siteId);
+
+        if (data.data.components && data.data.components.length > 0) {
+          setInitialComponents(data.data.components);
+        }
+
+        if (data.data.settings) {
+          setInitialSettings(data.data.settings);
+        }
+
+        if (data.data.title) {
+          setInitialTitle(data.data.title);
+        }
       }
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching popup:', error);
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (components: PopupComponent[], settings: PopupSettings, title: string) => {
+    setIsSaving(true);
     try {
       const url = isNew ? '/api/popups' : `/api/popups/${popupId}`;
       const method = isNew ? 'POST' : 'PUT';
 
+      const payload = {
+        siteId,
+        components,
+        settings,
+        title,
+        // Legacy fallback
+        description: 'Created with new builder',
+        ctaText: 'Submit',
+      };
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (data.success) {
-        if (isNew) {
-          router.push(`/dashboard/popups/${data.data._id}`);
-        } else {
-          setPopup(data.data);
-          alert('Popup saved successfully!');
-        }
+        // Redirect to popups list as requested
+        router.push('/dashboard/popups');
       } else {
         alert(data.error || 'Failed to save popup');
       }
     } catch (error) {
       console.error('Error saving popup:', error);
       alert('Failed to save popup');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   if (loading) {
-    return <div className="text-center py-12">Loading...</div>;
+    return <div className="text-center py-12">Loading editor...</div>;
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          {isNew ? 'Create Popup' : 'Edit Popup'}
-        </h1>
-        <button
-          onClick={handleSave}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Save Popup
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Form */}
-        <div>
-          <PopupBuilderForm
-            formData={formData}
-            setFormData={setFormData}
-            sites={sites}
-          />
-        </div>
-
-        {/* Preview */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Live Preview</h2>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <PopupPreview formData={formData} />
-          </div>
-
-          {/* Embed Code */}
-          {!isNew && popup && (
-            <div className="mt-6 bg-gray-50 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Embed Code</h3>
-              <p className="text-sm text-gray-600 mb-3">
-                Copy this code and paste it before the closing &lt;/body&gt; tag on your website:
-              </p>
-              <div className="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm overflow-x-auto">
-                <code>
-                  {`<script
-  src="${typeof window !== 'undefined' ? window.location.origin : 'https://yourapp.com'}/popup.js"
-  data-site-id="${formData.siteId}"
-></script>`}
-                </code>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="h-full bg-gray-50">
+      <DragAndDropBuilder
+        siteId={siteId}
+        popupId={isNew ? undefined : popupId}
+        initialComponents={initialComponents}
+        initialSettings={initialSettings}
+        initialTitle={initialTitle}
+        onSave={handleSave}
+        isSaving={isSaving}
+      />
     </div>
   );
 }

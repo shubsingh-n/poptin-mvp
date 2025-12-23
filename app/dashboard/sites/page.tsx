@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Globe, Trash2, Edit, ExternalLink, Plus } from 'lucide-react';
 
 // Force dynamic rendering to prevent prerender errors
 export const dynamic = 'force-dynamic';
@@ -94,7 +95,7 @@ export default function SitesPage() {
   }
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50 pb-12">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Sites</h1>
         <button
@@ -103,14 +104,14 @@ export default function SitesPage() {
             setFormData({ name: '', domain: '' });
             setShowModal(true);
           }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
         >
-          + Add Site
+          <span className="text-xl">+</span> Add Site
         </button>
       </div>
 
       {/* Sites List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-visible">
         {sites.length === 0 ? (
           <div className="p-12 text-center text-gray-500">
             No sites yet. Create your first site to get started.
@@ -128,15 +129,16 @@ export default function SitesPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Site ID
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {sites.map((site) => (
-                <tr key={site._id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tr key={site._id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center gap-2">
+                    <Globe size={16} className="text-gray-400" />
                     {site.name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -145,25 +147,30 @@ export default function SitesPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
                     {site.siteId}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button
-                      onClick={() => handleEdit(site)}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      Edit
-                    </button>
-                    <Link
-                      href={`/dashboard/popups?siteId=${site.siteId}`}
-                      className="text-green-600 hover:text-green-900"
-                    >
-                      Popups
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(site._id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => handleEdit(site)}
+                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                        title="Edit Site"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <Link
+                        href={`/dashboard/popups?siteId=${site.siteId}`}
+                        className="text-gray-400 hover:text-green-600 transition-colors"
+                        title="View Popups"
+                      >
+                        <ExternalLink size={18} />
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(site._id)}
+                        className="text-gray-400 hover:text-red-600 transition-colors"
+                        title="Delete Site"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -175,7 +182,7 @@ export default function SitesPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               {editingSite ? 'Edit Site' : 'Create Site'}
             </h2>
@@ -190,6 +197,7 @@ export default function SitesPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="My Awesome Site"
                 />
               </div>
               <div className="mb-4">
@@ -205,7 +213,7 @@ export default function SitesPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"
                   onClick={() => {
@@ -213,7 +221,7 @@ export default function SitesPage() {
                     setEditingSite(null);
                     setFormData({ name: '', domain: '' });
                   }}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   Cancel
                 </button>

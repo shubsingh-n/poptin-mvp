@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const body = await request.json();
-    const { siteId, popupId, email } = body;
+    const { siteId, popupId, email, data } = body;
 
     if (!siteId || !popupId || !email) {
       return NextResponse.json(
@@ -61,19 +61,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid email format' },
-        { status: 400, headers: corsHeaders }
-      );
+    // Basic email validation (skip for anonymous placeholder)
+    if (email !== 'anonymous@upload') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid email format' },
+          { status: 400, headers: corsHeaders }
+        );
+      }
     }
 
     // Try to create lead (will fail if duplicate)
     let lead;
     try {
-      lead = await Lead.create({ siteId, popupId, email });
+      lead = await Lead.create({ siteId, popupId, email, data });
     } catch (error: any) {
       if (error.code === 11000) {
         return NextResponse.json(

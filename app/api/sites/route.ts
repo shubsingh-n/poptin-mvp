@@ -14,7 +14,10 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching sites:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch sites' },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
@@ -50,19 +53,19 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error creating site:', error);
     console.error('Error details:', JSON.stringify(error, null, 2));
-    
+
     if (error.code === 11000) {
       return NextResponse.json(
         { success: false, error: 'Site ID already exists. Please try again.' },
         { status: 400 }
       );
     }
-    
+
     // Return more detailed error message for debugging
     const errorMessage = error.message || 'Failed to create site';
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: errorMessage,
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       },

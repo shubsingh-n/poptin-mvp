@@ -30,6 +30,10 @@ const LeadSchema: Schema = new Schema(
       lowercase: true,
       index: true,
     },
+    data: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
   },
   {
     timestamps: true,

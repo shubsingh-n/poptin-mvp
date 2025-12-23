@@ -20,6 +20,17 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Fix for inputs having white text on white background in some contexts */
+input, textarea, select {
+  color: #1a1a1a; /* Force dark text */
+  background-color: #ffffff;
+}
+
+/* Ensure full height for editor layout */
+html, body {
+  height: 100%;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

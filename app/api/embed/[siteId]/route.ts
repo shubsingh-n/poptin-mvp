@@ -44,10 +44,14 @@ export async function GET(
         success: true,
         data: {
           popupId: popup._id.toString(),
+          // Legacy
           title: popup.title,
           description: popup.description,
           ctaText: popup.ctaText,
           styles: popup.styles,
+          // New
+          components: popup.components,
+          settings: popup.settings,
           triggers: popup.triggers,
         },
       },

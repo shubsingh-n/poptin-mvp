@@ -19,11 +19,16 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching popups:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch popups' },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
+      },
       { status: 500 }
     );
   }
 }
+
 
 /**
  * POST /api/popups
@@ -41,20 +46,40 @@ export async function POST(request: NextRequest) {
       styles,
       triggers,
       isActive,
+      components,
+      settings,
     } = body;
 
-    if (!siteId || !title || !description) {
+    // Validate Site ID
+    if (!siteId) {
       return NextResponse.json(
-        { success: false, error: 'Site ID, title, and description are required' },
+        { success: false, error: 'Site ID is required' },
         { status: 400 }
       );
     }
 
+    // For legacy support or explicit title
+    const popupTitle = title || (settings ? 'New Popup' : undefined);
+
+    // Create popup
     const popup = await Popup.create({
       siteId,
-      title,
-      description,
+      // Legacy fields (optional or defaults)
+      title: popupTitle || 'Untitled Popup',
+      description: description || '',
       ctaText: ctaText || 'Subscribe',
+
+      // New Structure
+      components: components || [],
+      settings: settings || {
+        width: '500px',
+        height: 'auto',
+        backgroundColor: '#ffffff',
+        borderRadius: '8px',
+        padding: '2rem',
+        overlayColor: 'rgba(0, 0, 0, 0.5)',
+      },
+
       styles: styles || {
         backgroundColor: '#ffffff',
         textColor: '#000000',
