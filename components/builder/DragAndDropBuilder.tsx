@@ -106,6 +106,14 @@ export default function DragAndDropBuilder({
         setHasUnsavedChanges(true);
     };
 
+    const handleAddThankYouPage = () => {
+        const newIndex = totalPages;
+        setTotalPages(prev => prev + 1);
+        setActivePage(newIndex);
+        handleUpdateSettings({ thankYouPageIndex: newIndex });
+        setHasUnsavedChanges(true);
+    };
+
     const handleSwitchPage = (index: number) => {
         setActivePage(index);
         setSelectedId(null);
@@ -258,27 +266,53 @@ export default function DragAndDropBuilder({
             {/* Page Manager Bar */}
             <div className="bg-gray-50 border-b px-4 py-2 flex items-center gap-2 overflow-x-auto">
                 <span className="text-xs font-semibold text-gray-500 uppercase mr-2">Pages:</span>
-                {Array.from({ length: totalPages }).map((_, idx) => (
-                    <div key={idx} className="flex items-center">
-                        <button
-                            onClick={() => handleSwitchPage(idx)}
-                            className={`px-3 py-1 rounded text-sm flex items-center gap-2 ${activePage === idx ? 'bg-white shadow text-blue-600 font-medium ring-1 ring-blue-100' : 'text-gray-600 hover:bg-white/50'}`}
-                        >
-                            Step {idx + 1}
-                        </button>
-                        {/* Only allow deleting if it's the last page and not the first/only one */}
-                        {idx === totalPages - 1 && totalPages > 1 && (
-                            <button onClick={() => handleDeletePage(idx)} className="ml-1 text-gray-400 hover:text-red-500 px-1">×</button>
-                        )}
-                    </div>
-                ))}
+                {Array.from({ length: totalPages }).map((_, idx) => {
+                    const isThankYou = settings.thankYouPageIndex === idx;
+                    return (
+                        <div key={idx} className="flex items-center">
+                            <button
+                                onClick={() => handleSwitchPage(idx)}
+                                className={`px-3 py-1 rounded text-sm flex items-center gap-2 ${activePage === idx ? 'bg-white shadow text-blue-600 font-medium ring-1 ring-blue-100' : 'text-gray-600 hover:bg-white/50'}`}
+                            >
+                                {isThankYou ? (
+                                    <>
+                                        <span>🎉</span> Thank You
+                                    </>
+                                ) : (
+                                    `Step ${idx + 1}`
+                                )}
+                            </button>
+                            {/* Only allow deleting if it's the last page and not the first/only one */}
+                            {idx === totalPages - 1 && totalPages > 1 && (
+                                <button
+                                    onClick={() => {
+                                        if (isThankYou) handleUpdateSettings({ thankYouPageIndex: undefined });
+                                        handleDeletePage(idx);
+                                    }}
+                                    className="ml-1 text-gray-400 hover:text-red-500 px-1"
+                                >
+                                    ×
+                                </button>
+                            )}
+                        </div>
+                    );
+                })}
                 <button
                     onClick={handleAddPage}
-                    className="ml-2 w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600"
+                    className="ml-2 w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 transition-colors"
                     title="Add Step"
                 >
                     +
                 </button>
+                {!settings.thankYouPageIndex && (
+                    <button
+                        onClick={handleAddThankYouPage}
+                        className="ml-2 px-3 py-1 rounded-full border border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 text-xs flex items-center gap-1 transition-colors"
+                        title="Add Thank You Page"
+                    >
+                        <span>+</span> Add Thank You Screen
+                    </button>
+                )}
             </div>
 
             <DndContext

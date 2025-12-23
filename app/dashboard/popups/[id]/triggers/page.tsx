@@ -25,7 +25,7 @@ interface TriggersState {
     inactivityTime: number | null;
     visitedPage: TriggerRule[];
     // New Fields
-    visitorType: 'all' | 'unique' | 'repeater';
+    visitorType: 'all' | 'session_unique' | 'persistent_unique' | 'repeater';
     visitorCount: number;
     clickTrigger: string | null;
     autoCloseDelay: number | null;
@@ -342,10 +342,11 @@ export default function TriggerConfigPage() {
                         {activeTab === 'visitor' && (
                             <div className="space-y-6">
                                 <Section title="Visitor History" description="Who should see this popup?">
-                                    <div className="grid grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-2 gap-4">
                                         {[
-                                            { id: 'all', label: 'All Visitors', desc: 'Show to everyone' },
-                                            { id: 'unique', label: 'Unique Visitors', desc: 'First time visitors only (Session)' },
+                                            { id: 'all', label: 'Every Refresh', desc: 'Show every time the page is loaded' },
+                                            { id: 'session_unique', label: 'Unique Session', desc: 'Show once per browser session' },
+                                            { id: 'persistent_unique', label: 'Unique Visitors', desc: 'Show once per visitor (Persistent)' },
                                             { id: 'repeater', label: 'Returning Visitors', desc: 'Visitors with >1 session' },
                                         ].map(opt => (
                                             <button
@@ -742,7 +743,14 @@ function ActiveRulesSummary({ triggers }: { triggers: TriggersState }) {
     if (triggers.clickTrigger) rules.push(`On Click`);
     if (triggers.jsVariable.length > 0) rules.push(`JS Variable`);
     if (triggers.autoCloseDelay) rules.push(`Auto Close ${triggers.autoCloseDelay}s`);
-    if (triggers.visitorType !== 'all') rules.push(`${triggers.visitorType === 'unique' ? 'New' : 'Returning'} Visitors`);
+    if (triggers.visitorType !== 'all') {
+        const typeMap: any = {
+            session_unique: 'New session',
+            persistent_unique: 'Unique visitor',
+            repeater: 'Returning visitor'
+        };
+        rules.push(typeMap[triggers.visitorType] || triggers.visitorType);
+    }
     if (triggers.visitorCount > 0) rules.push(`Visit #${triggers.visitorCount}`);
 
     if (rules.length === 0) {

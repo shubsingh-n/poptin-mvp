@@ -81,7 +81,10 @@ export interface PopupSettings {
         title: string;
         description: string;
         displayDuration: number; // in seconds
+        useCustomPage?: boolean; // New
+        pageIndex?: number; // New
     };
+    thankYouPageIndex?: number; // New: Simplified top-level ref
     overState?: {
         enabled: boolean;
         text: string;

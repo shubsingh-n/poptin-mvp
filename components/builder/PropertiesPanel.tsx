@@ -298,25 +298,45 @@ export default function PropertiesPanel({
                     <div className="border-t pt-4 space-y-4 pb-8">
                         <div className="flex items-center justify-between">
                             <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Thank You Screen</h4>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-gray-400 font-medium">ENABLE</span>
-                                <input
-                                    type="checkbox"
-                                    checked={settings.thankYou?.enabled || false}
-                                    onChange={(e) => onUpdateSettings({
-                                        thankYou: {
-                                            enabled: e.target.checked,
-                                            title: settings.thankYou?.title || 'Thank You!',
-                                            description: settings.thankYou?.description || 'Your submission has been received.',
-                                            displayDuration: settings.thankYou?.displayDuration || 3
-                                        }
-                                    })}
-                                    className="toggle-checkbox"
-                                />
-                            </div>
+                            {settings.thankYouPageIndex !== undefined ? (
+                                <div className="text-[10px] bg-green-50 text-green-600 px-2 py-1 rounded border border-green-100 font-medium">
+                                    CUSTOM STEP ACTIVE
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-gray-400 font-medium">ENABLE</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.thankYou?.enabled || false}
+                                        onChange={(e) => onUpdateSettings({
+                                            thankYou: {
+                                                enabled: e.target.checked,
+                                                title: settings.thankYou?.title || 'Thank You!',
+                                                description: settings.thankYou?.description || 'Your submission has been received.',
+                                                displayDuration: settings.thankYou?.displayDuration || 3
+                                            }
+                                        })}
+                                        className="toggle-checkbox"
+                                    />
+                                </div>
+                            )}
                         </div>
 
-                        {settings.thankYou?.enabled && (
+                        {settings.thankYouPageIndex !== undefined && (
+                            <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                <p className="text-xs text-gray-500 italic">
+                                    Design your thank you message on the designated <strong>Thank You Page</strong> in the page manager.
+                                </p>
+                                <button
+                                    onClick={() => onUpdateSettings({ thankYouPageIndex: undefined })}
+                                    className="mt-2 text-[10px] text-red-500 hover:underline"
+                                >
+                                    Remove custom step and use default
+                                </button>
+                            </div>
+                        )}
+
+                        {settings.thankYou?.enabled && settings.thankYouPageIndex === undefined && (
                             <div className="space-y-4 pt-2">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>

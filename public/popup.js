@@ -145,10 +145,20 @@
       console.log('%c⊘ Popup blocked: Already submitted in this session (ID: ' + popupConfig.popupId + ')', 'color: #6c757d;');
     }
 
-    // "Unique" Rule: Once per session
-    if (isPopupAllowed && visitorType === 'unique') {
+    // Every Refresh (all) - No block
+
+    // Unique Session (session_unique or legacy unique)
+    if (isPopupAllowed && (visitorType === 'session_unique' || visitorType === 'unique')) {
       if (sessionStorage.getItem('popup_max_shown_' + popupConfig.popupId)) {
-        console.log('%c⊘ Popup blocked: Unique visitor already saw it in this session', 'color: #6c757d;');
+        console.log('%c⊘ Popup blocked: Unique session rule - already saw it', 'color: #6c757d;');
+        isPopupAllowed = false;
+      }
+    }
+
+    // Unique Visitor (persistent_unique)
+    if (isPopupAllowed && visitorType === 'persistent_unique') {
+      if (localStorage.getItem('popup_max_shown_' + popupConfig.popupId)) {
+        console.log('%c⊘ Popup blocked: Persistent visitor rule - already saw it', 'color: #6c757d;');
         isPopupAllowed = false;
       }
     }
@@ -937,6 +947,28 @@
     const popupContent = document.getElementById('popup-max-popup');
     if (!popupContent) return;
 
+    // Check if there is a custom Thank You page index
+    const thankYouPageIndex = popupConfig.settings?.thankYouPageIndex;
+    if (typeof thankYouPageIndex === 'number') {
+      const form = popupContent.querySelector('form');
+      if (form) {
+        const steps = form.querySelectorAll('.pm-step');
+        const thankYouStep = form.querySelector(`.pm-step[data-step="${thankYouPageIndex}"]`);
+        if (thankYouStep) {
+          steps.forEach(s => s.style.display = 'none');
+          thankYouStep.style.display = 'block';
+
+          // Apply auto-close if configured
+          const displayDuration = popupConfig.settings?.thankYou?.displayDuration;
+          if (displayDuration && displayDuration > 0) {
+            setTimeout(closePopup, displayDuration * 1000);
+          }
+          return;
+        }
+      }
+    }
+
+    // Fallback to template if no custom page or template is enabled
     const config = popupConfig.settings?.thankYou;
     if (config?.enabled) {
       popupContent.innerHTML = `
@@ -954,7 +986,7 @@
         setTimeout(closePopup, config.displayDuration * 1000);
       }
     } else {
-      // Default fallback if not enabled or configured
+      // Default fallback
       popupContent.innerHTML = `
         <div style="text-align: center; padding: 2rem;">
           <h2 style="color: ${popupConfig.styles?.textColor || '#000'}; margin-bottom: 1rem; font-size: 1.5rem; font-weight: bold;">
@@ -980,6 +1012,7 @@
       document.body.appendChild(overlay);
       popupShown = true;
       sessionStorage.setItem('popup_max_shown_' + popupConfig.popupId, 'true');
+      localStorage.setItem('popup_max_shown_' + popupConfig.popupId, 'true');
       console.log('%c🎯 Popup displayed!', 'color: #28a745; font-weight: bold;');
       trackEvent('view');
 
