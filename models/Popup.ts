@@ -70,6 +70,8 @@ export interface IPopup extends Document {
     visitedPage?: Array<{ matchType: string; value: string }>;
   };
   isActive: boolean;
+  testGroupId?: string;   // New: For A/B Testing
+  variantLabel?: string; // New: e.g., 'A', 'B', 'C'
   createdAt: Date;
   updatedAt: Date;
 }
@@ -184,6 +186,8 @@ const PopupSchema: Schema = new Schema(
       type: Boolean,
       default: true,
     },
+    testGroupId: { type: String, default: null, index: true },
+    variantLabel: { type: String, default: null },
   },
   {
     timestamps: true,

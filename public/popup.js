@@ -47,7 +47,13 @@
   async function fetchPopupConfig() {
     try {
       console.log('%c⏳ Fetching popup configuration...', 'color: #ffc107;');
-      const response = await fetch(`${origin}/api/embed/${siteId}`);
+      const lastVariantId = localStorage.getItem('popup_max_last_variant_' + siteId);
+      let url = `${origin}/api/embed/${siteId}`;
+      if (lastVariantId) {
+        url += (url.includes('?') ? '&' : '?') + 'lastVariantId=' + lastVariantId;
+      }
+
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.success && data.data) {
@@ -139,10 +145,11 @@
     const visitorType = triggers.visitorType || 'all';
     const requiredCount = triggers.visitorCount || 0;
 
-    let isPopupAllowed = !isSubmitted;
+    let isPopupAllowed = true;
 
-    if (isSubmitted) {
+    if (isSubmitted && visitorType !== 'all') {
       console.log('%c⊘ Popup blocked: Already submitted in this session (ID: ' + popupConfig.popupId + ')', 'color: #6c757d;');
+      isPopupAllowed = false;
     }
 
     // Every Refresh (all) - No block
@@ -1048,6 +1055,12 @@
       popupShown = true;
       sessionStorage.setItem('popup_max_shown_' + popupConfig.popupId, 'true');
       localStorage.setItem('popup_max_shown_' + popupConfig.popupId, 'true');
+
+      // Store as last variant for A/B testing
+      if (popupConfig.testGroupId) {
+        localStorage.setItem('popup_max_last_variant_' + siteId, popupConfig.popupId);
+      }
+
       console.log('%c🎯 Popup displayed!', 'color: #28a745; font-weight: bold;');
       trackEvent('view');
 
