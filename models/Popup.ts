@@ -137,7 +137,8 @@ const PopupSchema: Schema = new Schema(
         position: { type: String, default: 'top-right' },
         color: { type: String, default: '#000000' }
       },
-      closeOnOverlayClick: { type: Boolean, default: true }
+      closeOnOverlayClick: { type: Boolean, default: true },
+      thankYouPageIndex: { type: Number, default: null }
     },
 
     // Dynamic Components List

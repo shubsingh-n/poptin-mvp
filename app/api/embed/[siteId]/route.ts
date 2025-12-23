@@ -43,46 +43,61 @@ export async function GET(
       );
     }
 
-    let selectedPopup = activePopups[0]; // Default to most recent
+    // Grouping Logic: Separate standalone popups from A/B test groups
+    const standalonePopups = activePopups.filter(p => !p.testGroupId);
+    const groupedPopups = activePopups.filter(p => p.testGroupId);
 
-    // A/B Testing Logic
-    // If the most recent active popup belongs to a test group, we handle variant cycling
-    if (selectedPopup.testGroupId) {
-      const variants = activePopups
-        .filter(p => p.testGroupId === selectedPopup.testGroupId)
-        .sort((a, b) => (a.variantLabel || '').localeCompare(b.variantLabel || ''));
+    // Group the grouped popups by their testGroupId
+    const groups: Record<string, any[]> = {};
+    groupedPopups.forEach(p => {
+      if (!groups[p.testGroupId!]) groups[p.testGroupId!] = [];
+      groups[p.testGroupId!].push(p);
+    });
+
+    const selectedPopups: any[] = [];
+
+    // Add all standalone popups
+    standalonePopups.forEach(p => selectedPopups.push(p));
+
+    // For each group, select one variant (Round Robin)
+    Object.keys(groups).forEach(groupId => {
+      const variants = groups[groupId].sort((a, b) => (a.variantLabel || '').localeCompare(b.variantLabel || ''));
+      let selectedVariant = variants[0];
 
       if (variants.length > 1) {
         let nextIndex = 0;
         if (lastVariantId) {
+          // Note: This logic assumes lastVariantId is globally unique, but it might only match one group.
+          // We might need to pass multiple lastVariantIds if we really want to track precisely per group,
+          // but for now we'll stick to a simpler approach or just try to find it.
           const currentIndex = variants.findIndex(v => v._id.toString() === lastVariantId);
           if (currentIndex !== -1) {
             nextIndex = (currentIndex + 1) % variants.length;
           }
         }
-        selectedPopup = variants[nextIndex];
-        console.log(`[ABtest] Site ${params.siteId}: Last was ${lastVariantId}, serving ${selectedPopup._id} (${selectedPopup.variantLabel})`);
+        selectedVariant = variants[nextIndex];
       }
-    }
+      selectedPopups.push(selectedVariant);
+    });
 
-    // Return only the data needed for the embed script
+    // Format the response data
+    const responseData = selectedPopups.map(popup => ({
+      popupId: popup._id.toString(),
+      testGroupId: popup.testGroupId,
+      variantLabel: popup.variantLabel,
+      title: popup.title,
+      description: popup.description,
+      ctaText: popup.ctaText,
+      styles: popup.styles,
+      components: popup.components,
+      settings: popup.settings,
+      triggers: popup.triggers,
+    }));
+
     return NextResponse.json(
       {
         success: true,
-        data: {
-          popupId: selectedPopup._id.toString(),
-          testGroupId: selectedPopup.testGroupId,
-          variantLabel: selectedPopup.variantLabel,
-          // Legacy
-          title: selectedPopup.title,
-          description: selectedPopup.description,
-          ctaText: selectedPopup.ctaText,
-          styles: selectedPopup.styles,
-          // New
-          components: selectedPopup.components,
-          settings: selectedPopup.settings,
-          triggers: selectedPopup.triggers,
-        },
+        data: responseData,
       },
       { status: 200, headers: corsHeaders }
     );
