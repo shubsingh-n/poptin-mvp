@@ -32,8 +32,9 @@ export interface PopupComponent {
         speed?: number;
         direction?: 'left' | 'right';
         // Button specific
-        action?: 'submit' | 'next' | 'prev' | 'close' | 'link';
+        action?: 'submit' | 'next' | 'prev' | 'close' | 'link' | 'trigger_popup';
         actionUrl?: string;
+        triggerPopupId?: string; // New: For cross-popup triggers
         hidden?: boolean;
         // Validation (New)
         validation?: {

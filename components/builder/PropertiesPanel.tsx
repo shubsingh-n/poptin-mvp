@@ -9,6 +9,8 @@ interface PropertiesPanelProps {
     onUpdateComponent: (id: string, updates: Partial<PopupComponent>) => void;
     onUpdateSettings: (updates: Partial<PopupSettings>) => void;
     onDeleteComponent: (id: string) => void;
+    siteId?: string;
+    currentPopupId?: string;
 }
 
 export default function PropertiesPanel({
@@ -16,8 +18,30 @@ export default function PropertiesPanel({
     settings,
     onUpdateComponent,
     onUpdateSettings,
-    onDeleteComponent
+    onDeleteComponent,
+    siteId,
+    currentPopupId
 }: PropertiesPanelProps) {
+    const [sitePopups, setSitePopups] = React.useState<any[]>([]);
+
+    React.useEffect(() => {
+        if (siteId && selectedComponent?.type === 'button') {
+            fetchSitePopups();
+        }
+    }, [siteId, selectedComponent?.id]);
+
+    const fetchSitePopups = async () => {
+        try {
+            const res = await fetch(`/api/popups/site/${siteId}`);
+            const data = await res.json();
+            if (data.success) {
+                // Filter out current popup
+                setSitePopups(data.data.filter((p: any) => p._id !== currentPopupId));
+            }
+        } catch (error) {
+            console.error('Error fetching site popups:', error);
+        }
+    };
 
     if (!selectedComponent) {
         // Show global settings
@@ -452,8 +476,29 @@ export default function PropertiesPanel({
                                     <option value="prev">Back (Previous Step)</option>
                                     <option value="close">Close Popup</option>
                                     <option value="link">Go to URL</option>
+                                    <option value="trigger_popup">Trigger another Popup</option>
                                 </select>
                             </div>
+                            {content.action === 'trigger_popup' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Popup</label>
+                                    <select
+                                        value={content.triggerPopupId || ''}
+                                        onChange={(e) => handleContentChange('triggerPopupId', e.target.value)}
+                                        className="w-full border rounded px-3 py-2 text-sm"
+                                    >
+                                        <option value="">Select a popup...</option>
+                                        {sitePopups.map(p => (
+                                            <option key={p._id} value={p._id}>{p.title}</option>
+                                        ))}
+                                    </select>
+                                    {sitePopups.length === 0 && (
+                                        <p className="text-[10px] text-gray-500 mt-1 italic">
+                                            No other popups found for this site.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                             {content.action === 'link' && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Target URL</label>

@@ -351,6 +351,8 @@ export default function DragAndDropBuilder({
                         onUpdateComponent={handleUpdateComponent}
                         onUpdateSettings={handleUpdateSettings}
                         onDeleteComponent={handleDeleteComponent}
+                        siteId={siteId}
+                        currentPopupId={popupId}
                     />
                 </div>
 

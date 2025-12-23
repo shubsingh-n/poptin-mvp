@@ -493,7 +493,7 @@
         const btn = e.target.closest('button[data-action]');
         if (btn) {
           e.preventDefault();
-          handleAction(popupConfig.popupId, btn.dataset.action, form, btn.dataset.url);
+          handleAction(popupConfig.popupId, btn.dataset.action, form, btn.dataset.url, btn.dataset.triggerPopupId);
         }
       });
 
@@ -712,6 +712,7 @@
         el.textContent = content.text || 'Submit';
         el.dataset.action = content.action || 'submit';
         if (content.actionUrl) el.dataset.url = content.actionUrl;
+        if (content.triggerPopupId) el.dataset.triggerPopupId = content.triggerPopupId;
         el.style.cursor = 'pointer';
         break;
 
@@ -832,7 +833,7 @@
     }, 1000);
   }
 
-  async function handleAction(popupId, action, form, url) {
+  async function handleAction(popupId, action, form, url, triggerPopupId) {
     const currentStepDiv = form.querySelector('.pm-step:not([style*="display: none"])');
     const currentStepIdx = parseInt(currentStepDiv.dataset.step);
 
@@ -851,6 +852,12 @@
 
     if (action === 'close') {
       closePopup();
+    } else if (action === 'trigger_popup') {
+      if (triggerPopupId) {
+        triggerOtherPopup(triggerPopupId);
+      } else {
+        closePopup();
+      }
     } else if (action === 'link') {
       // Save data before redirecting
       const stepData = {};
@@ -998,6 +1005,34 @@
         </div>
       `;
       setTimeout(closePopup, 3000);
+    }
+  }
+
+  /**
+   * Trigger another popup immediately
+   */
+  async function triggerOtherPopup(id) {
+    console.log('%c🔗 Triggering another popup (ID: ' + id + ')...', 'color: #007bff;');
+    closePopup();
+
+    try {
+      const response = await fetch(`${origin}/api/embed/popup/${id}`);
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        popupConfig = data.data;
+        console.log('%c✓ Chained popup configuration loaded!', 'color: #28a745;');
+
+        // Show immediately, ignoring visitor rules for chained popups
+        // Using a small delay to ensure clean transition
+        setTimeout(() => {
+          showPopup();
+        }, 300);
+      } else {
+        console.warn('%c⚠ Triggered popup not found:', 'color: #ffc107;', id);
+      }
+    } catch (error) {
+      console.error('Error triggering chained popup:', error);
     }
   }
 
