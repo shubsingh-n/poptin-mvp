@@ -4,7 +4,7 @@ import mongoose, { Schema, Document } from 'mongoose';
  * Event Model
  * Tracks analytics events (views, conversions, etc.)
  */
-export type EventType = 'view' | 'conversion';
+export type EventType = 'view' | 'conversion' | 'visit';
 
 export interface IEvent extends Document {
   siteId: string;
@@ -27,7 +27,7 @@ const EventSchema: Schema = new Schema(
     },
     type: {
       type: String,
-      enum: ['view', 'conversion'],
+      enum: ['view', 'conversion', 'visit'],
       required: [true, 'Event type is required'],
       index: true,
     },

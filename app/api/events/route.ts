@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['view', 'conversion'].includes(type)) {
+    if (!['view', 'conversion', 'visit'].includes(type)) {
       return NextResponse.json(
         { success: false, error: 'Invalid event type' },
         { status: 400, headers: corsHeaders }
