@@ -161,7 +161,10 @@
       const cl = document.createElement('button'); cl.innerHTML = '&times;'; cl.style.cssText = 'position:absolute;top:10px;right:10px;background:none;border:none;font-size:24px;cursor:pointer;';
       cl.onclick = () => closePopup(config); popup.appendChild(cl);
     }
-    form.addEventListener('click', (e) => { const b = e.target.closest('button[data-action]'); if (b) handleAction(config, b.dataset.action, form, b.dataset.url); });
+    form.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-action]');
+      if (b) handleAction(config, b.dataset.action, form, b.dataset.url, b.dataset.triggerPopupId);
+    });
     overlay.appendChild(popup);
     activePopups[config.popupId].element = overlay;
     return overlay;
@@ -171,7 +174,11 @@
     const { type, content, style, id } = c; let el;
     if (type === 'title') el = document.createElement('h2');
     else if (type === 'description') el = document.createElement('p');
-    else if (type === 'button') { el = document.createElement('button'); el.textContent = content.text || 'Submit'; el.dataset.action = content.action || 'submit'; if (content.actionUrl) el.dataset.url = content.actionUrl; }
+    else if (type === 'button') {
+      el = document.createElement('button'); el.textContent = content.text || 'Submit'; el.dataset.action = content.action || 'submit';
+      if (content.actionUrl) el.dataset.url = content.actionUrl;
+      if (content.triggerPopupId) el.dataset.triggerPopupId = content.triggerPopupId;
+    }
     else if (['email', 'phone', 'shortText', 'date'].includes(type)) {
       el = document.createElement('input');
       const p = content.placeholder || c.label || id || '';
@@ -220,7 +227,7 @@
     }, 1000);
   }
 
-  async function handleAction(config, action, form, url) {
+  async function handleAction(config, action, form, url, triggerPopupId) {
     const cs = form.querySelector('.pm-step:not([style*="display: none"])'), si = parseInt(cs.dataset.step);
     if (action === 'close') closePopup(config);
     else if (action === 'next' || action === 'submit') {
@@ -228,7 +235,22 @@
       await fetch(`${origin}/api/leads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ siteId, popupId: config.popupId, data: fd, leadId: currentLeadId }), }).then(r => r.json()).then(d => { if (d.success) currentLeadId = d.data?._id; });
       if (action === 'next') { const n = form.querySelector(`.pm-step[data-step="${si + 1}"]`); if (n) { cs.style.display = 'none'; n.style.display = 'block'; } }
       else { sessionStorage.setItem(SUBMIT_KEY_PREFIX + config.popupId, 'true'); showThankYou(config); }
+    } else if (action === 'prev') {
+      const p = form.querySelector(`.pm-step[data-step="${si - 1}"]`);
+      if (p) { cs.style.display = 'none'; p.style.display = 'block'; }
     } else if (action === 'link' && url) window.location.href = url;
+    else if (action === 'trigger_popup' && triggerPopupId) {
+      closePopup(config);
+      try {
+        const r = await fetch(`${origin}/api/embed/popup/${triggerPopupId}`);
+        const d = await r.json();
+        if (d.success && d.data) {
+          const cfg = d.data;
+          activePopups[cfg.popupId] = { shown: false, closed: false, element: null, config: cfg };
+          setTimeout(() => showPopup(cfg, true), 300);
+        }
+      } catch (e) { console.error('Error triggering chained popup:', e); }
+    }
   }
 
   function showThankYou(config) {
