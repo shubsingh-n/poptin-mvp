@@ -116,3 +116,35 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * DELETE /api/leads
+ * Delete single or multiple leads
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    await connectDB();
+    const body = await request.json();
+    const { ids } = body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Lead IDs are required' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    const result = await Lead.deleteMany({ _id: { $in: ids } });
+
+    return NextResponse.json(
+      { success: true, deletedCount: result.deletedCount },
+      { status: 200, headers: corsHeaders }
+    );
+  } catch (error: any) {
+    console.error('Error deleting leads:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete leads', message: error.message },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
+
