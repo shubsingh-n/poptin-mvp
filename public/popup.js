@@ -163,6 +163,15 @@
       const b = e.target.closest('button[data-action]');
       if (b) handleAction(config, b.dataset.action, form, b.dataset.url, b.dataset.triggerPopupId);
     });
+
+    form.addEventListener('input', (e) => {
+      if (e.target.classList.contains('popup-data-field')) {
+        const step = e.target.closest('.pm-step');
+        if (step) updateButtonStates(form, parseInt(step.dataset.step));
+      }
+    });
+
+    setTimeout(() => updateButtonStates(form, 0), 100);
     overlay.appendChild(popup);
     activePopups[config.popupId].element = overlay;
     return overlay;
@@ -189,11 +198,24 @@
         el.type = type === 'email' ? 'email' : (type === 'phone' ? 'tel' : 'text');
       }
       el.name = c.label || id; el.classList.add('popup-data-field');
+      if (content.validation?.required || content.required) {
+        el.required = true;
+        el.dataset.required = 'true';
+      }
+      if (content.validation?.pattern) el.dataset.pattern = content.validation.pattern;
+      if (content.validation?.min) el.dataset.min = content.validation.min;
+      if (content.validation?.max) el.dataset.max = content.validation.max;
     }
     else if (type === 'longText') {
       el = document.createElement('textarea');
       el.placeholder = content.placeholder || c.label || id || '';
       el.name = c.label || id; el.classList.add('popup-data-field');
+      if (content.validation?.required || content.required) {
+        el.required = true;
+        el.dataset.required = 'true';
+      }
+      if (content.validation?.min) el.dataset.min = content.validation.min;
+      if (content.validation?.max) el.dataset.max = content.validation.max;
     }
     else if (type === 'image') { el = document.createElement('img'); el.src = content.src || ''; el.style.maxWidth = '100%'; }
     else if (type === 'timer') { el = document.createElement('div'); startTimer(el, content.targetDate); }
@@ -214,6 +236,58 @@
       });
     }
     return el;
+  }
+
+  function validateField(field) {
+    if (!field) return true;
+    const val = field.value.trim();
+
+    if (field.dataset.required === 'true' && !val) return false;
+
+    if (field.type === 'email' && val) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(val)) return false;
+    }
+
+    if (field.dataset.pattern && val) {
+      const regex = new RegExp(field.dataset.pattern);
+      if (!regex.test(val)) return false;
+    }
+
+    if (field.dataset.min && val.length < parseInt(field.dataset.min)) return false;
+    if (field.dataset.max && val.length > parseInt(field.dataset.max)) return false;
+
+    return true;
+  }
+
+  function validateStep(form, stepIndex) {
+    const step = form.querySelector(`.pm-step[data-step="${stepIndex}"]`);
+    if (!step) return true;
+
+    const fields = step.querySelectorAll('.popup-data-field');
+    for (const field of fields) {
+      if (!validateField(field)) {
+        field.style.borderColor = '#ef4444';
+        return false;
+      } else {
+        field.style.borderColor = '';
+      }
+    }
+    return true;
+  }
+
+  function updateButtonStates(form, stepIndex) {
+    const step = form.querySelector(`.pm-step[data-step="${stepIndex}"]`);
+    if (!step) return;
+
+    const buttons = step.querySelectorAll('button[data-action="next"], button[data-action="submit"]');
+    const isValid = validateStep(form, stepIndex);
+
+    buttons.forEach(btn => {
+      btn.disabled = !isValid;
+      btn.style.opacity = isValid ? '1' : '0.5';
+      btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+    });
   }
 
   function startTimer(el, td) {
