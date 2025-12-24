@@ -53,7 +53,6 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const body = await request.json();
-    console.log('[Leads-API] Received body:', JSON.stringify(body));
     const { siteId, popupId, email, data, leadId } = body;
 
     if (!siteId || !popupId) {
@@ -63,68 +62,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Email extracted from top-level or data object
     const emailToSave = email || data?.email || data?.Email || '';
 
-    // Basic email validation if provided
-    if (emailToSave) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (emailToSave !== 'anonymous@upload' && !emailRegex.test(emailToSave)) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid email format' },
-          { status: 400, headers: corsHeaders }
-        );
-      }
-    }
-
     let lead;
-    try {
-      if (leadId) {
-        console.log('[Leads-API] Updating lead:', leadId);
-        lead = await Lead.findById(leadId);
-        if (lead) {
-          if (emailToSave) lead.email = emailToSave;
-          if (data) {
-            lead.data = { ...(lead.data || {}), ...data };
-            lead.markModified('data');
-          }
-          await lead.save();
-        } else {
-          lead = await Lead.create({ siteId, popupId, email: emailToSave, data });
+    if (leadId) {
+      // UPDATE existing lead for multi-step continuity
+      lead = await Lead.findById(leadId);
+      if (lead) {
+        if (emailToSave) lead.email = emailToSave;
+        if (data) {
+          lead.data = { ...(lead.data || {}), ...data };
+          lead.markModified('data');
         }
+        await lead.save();
       } else {
-        console.log('[Leads-API] Creating new lead');
+        // Fallback: create if provided leadId is not found
         lead = await Lead.create({ siteId, popupId, email: emailToSave, data });
       }
-    } catch (dbErr: any) {
-      console.error('[Leads-API] DB Error (Lead Operation):', dbErr);
-      return NextResponse.json({ success: false, error: 'DB error during lead creation', message: dbErr.message }, { status: 500, headers: corsHeaders });
+    } else {
+      // ALWAYS CREATE new lead if no leadId (new session/attempt)
+      lead = await Lead.create({ siteId, popupId, email: emailToSave, data });
     }
 
+    // Track conversion event and increment stats ONLY on first creation
     if (!leadId) {
       try {
-        console.log('[Leads-API] Creating Event');
-        await Event.create({
-          siteId,
-          popupId,
-          type: 'conversion',
-        });
-      } catch (evtErr: any) {
-        console.error('[Leads-API] DB Error (Event Creation):', evtErr);
-        // We don't necessarily want to fail the whole request if event fails, 
-        // but let's see if this is causing the 500.
-      }
-
-      try {
-        console.log('[Leads-API] Incrementing Stats');
+        await Event.create({ siteId, popupId, type: 'conversion' });
         await Popup.findByIdAndUpdate(popupId, { $inc: { 'stats.submissions': 1 } });
-      } catch (statsErr: any) {
-        console.error('[Leads-API] DB Error (Stats Increment):', statsErr);
+      } catch (err) {
+        console.error('Non-critical error updating stats:', err);
       }
     }
 
     return NextResponse.json({ success: true, data: lead }, { status: leadId ? 200 : 201, headers: corsHeaders });
   } catch (error: any) {
-    console.error('[Leads-API] Global Error:', error);
+    console.error('Leads API Error:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to process lead', message: error.message },
       { status: 500, headers: corsHeaders }

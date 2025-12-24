@@ -18,8 +18,6 @@
   let activePopups = {};
   let teaserElement = null;
   let exitIntentBound = false;
-  let popupFilled = sessionStorage.getItem('popup_max_filled') === 'true';
-  let currentLeadId = null;
   const SUBMIT_KEY_PREFIX = 'popup_max_submitted_';
 
   async function fetchPopupConfig() {
@@ -31,7 +29,7 @@
       if (data.success && Array.isArray(data.data)) {
         popupConfigs = data.data;
         popupConfigs.forEach(config => {
-          activePopups[config.popupId] = { shown: false, closed: false, element: null, config: config };
+          activePopups[config.popupId] = { shown: false, closed: false, element: null, config: config, leadId: null };
         });
         return true;
       }
@@ -236,10 +234,10 @@
         const r = await fetch(`${origin}/api/leads`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ siteId, popupId: config.popupId, data: fd, leadId: currentLeadId }),
+          body: JSON.stringify({ siteId, popupId: config.popupId, data: fd, leadId: activePopups[config.popupId].leadId }),
         });
         const d = await r.json();
-        if (d.success && d.data?._id) currentLeadId = d.data._id;
+        if (d.success && d.data?._id) activePopups[config.popupId].leadId = d.data._id;
       } catch (e) { console.error('Popup-Max: Save error', e); }
     };
 
@@ -252,6 +250,7 @@
       } else {
         sessionStorage.setItem(SUBMIT_KEY_PREFIX + config.popupId, 'true');
         showThankYou(config);
+        activePopups[config.popupId].leadId = null;
       }
     } else if (action === 'prev') {
       const p = form.querySelector(`.pm-step[data-step="${si - 1}"]`);
@@ -267,7 +266,7 @@
         const d = await r.json();
         if (d.success && d.data) {
           const cfg = d.data;
-          activePopups[cfg.popupId] = { shown: false, closed: false, element: null, config: cfg };
+          activePopups[cfg.popupId] = { shown: false, closed: false, element: null, config: cfg, leadId: null };
           setTimeout(() => showPopup(cfg, true), 300);
         }
       } catch (e) { console.error('Error triggering chained popup:', e); }

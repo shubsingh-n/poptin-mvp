@@ -7,8 +7,10 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface ILead extends Document {
   siteId: string;
   popupId: string; // Reference to Popup
-  email: string;
+  email?: string;
+  data: any;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const LeadSchema: Schema = new Schema(
