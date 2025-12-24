@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const body = await request.json();
+    console.log('Lead submission body:', body);
     const { siteId, popupId, email, data, leadId } = body;
 
     if (!siteId || !popupId) {
@@ -111,10 +112,10 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data: lead }, { status: leadId ? 200 : 201, headers: corsHeaders });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error handling lead:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to process lead' },
+      { success: false, error: 'Failed to process lead', message: error.message },
       { status: 500, headers: corsHeaders }
     );
   }
