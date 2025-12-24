@@ -359,7 +359,9 @@
   function showPopup(config, bypass = false) {
     const id = config.popupId; if (activePopups[id].shown || (activePopups[id].closed && !bypass)) return;
     const ov = createPopup(config); document.body.appendChild(ov);
-    activePopups[id].shown = true; sessionStorage.setItem('popup_max_shown_' + id, 'true'); trackEvent('view', config);
+    activePopups[id].shown = true; sessionStorage.setItem('popup_max_shown_' + id, 'true');
+    if (config.testGroupId) localStorage.setItem('popup_max_last_variant_' + siteId, config.popupId);
+    trackEvent('view', config);
   }
 
   function closePopup(config) {
