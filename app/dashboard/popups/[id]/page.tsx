@@ -50,10 +50,6 @@ function PopupBuilderContent() {
         if (data.data.title) {
           setInitialTitle(data.data.title);
         }
-
-        if (data.data.type) {
-          setPopupType(data.data.type);
-        }
       }
     } catch (error) {
       console.error('Error fetching popup:', error);
