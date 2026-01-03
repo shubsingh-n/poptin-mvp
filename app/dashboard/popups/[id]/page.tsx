@@ -14,7 +14,6 @@ function PopupBuilderContent() {
 
   const [loading, setLoading] = useState(true);
   const [siteId, setSiteId] = useState<string>('');
-  const [popupType, setPopupType] = useState<'popup' | 'notification'>('popup');
 
   // State for builder
   const [initialComponents, setInitialComponents] = useState<PopupComponent[]>([]);
@@ -25,14 +24,8 @@ function PopupBuilderContent() {
   useEffect(() => {
     if (isNew) {
       const sid = searchParams.get('siteId');
-      const type = searchParams.get('type') as 'popup' | 'notification';
       if (sid) setSiteId(sid);
-      if (type) {
-        setPopupType(type);
-        setInitialTitle(type === 'notification' ? 'My Notification' : 'New Popup');
-      } else {
-        setInitialTitle('New Popup');
-      }
+      setInitialTitle('New Popup');
       setLoading(false);
     } else {
       fetchPopup();
@@ -80,7 +73,6 @@ function PopupBuilderContent() {
         components,
         settings,
         title,
-        type: popupType,
         // Legacy fallback
         description: 'Created with new builder',
         ctaText: 'Submit',

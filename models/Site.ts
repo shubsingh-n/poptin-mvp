@@ -9,6 +9,8 @@ export interface ISite extends Document {
   domain: string;
   siteId: string; // Unique identifier for embed script
   userId: string; // Owner ID
+  isPushVerified?: boolean; // New: For Push Notification Setup
+  isPopupVerified?: boolean; // New: For Popup Setup
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +38,14 @@ const SiteSchema: Schema = new Schema(
       required: true,
       unique: true,
       index: true,
+    },
+    isPushVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isPopupVerified: {
+      type: Boolean,
+      default: false,
     },
   },
   {

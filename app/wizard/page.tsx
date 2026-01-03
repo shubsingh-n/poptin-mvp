@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Users, Globe, MessageSquare, MousePointer, Target } from 'lucide-react';
+import { Loader2, Users, Globe, MessageSquare, MousePointer, Target, Bell } from 'lucide-react';
 
 export default function WizardPage() {
     const [stats, setStats] = useState<any>(null);
@@ -172,12 +172,15 @@ export default function WizardPage() {
                 </div>
 
                 {/* Global Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatCard title="Total Users" value={global?.totalUsers} icon={<Users />} />
                     <StatCard title="Total Sites" value={global?.totalSites} icon={<Globe />} />
                     <StatCard title="Total Popups" value={global?.totalPopups} icon={<MessageSquare />} />
-                    <StatCard title="Total Triggers" value={global?.totalEvents} icon={<Target />} />
                     <StatCard title="Total Leads" value={global?.totalLeads} icon={<MousePointer />} />
+                    <StatCard title="Total Triggers" value={global?.totalEvents} icon={<Target />} />
+                    <StatCard title="Subscribers" value={global?.totalSubscribers} icon={<Users className="text-purple-500" />} />
+                    <StatCard title="Campaigns" value={global?.totalCampaigns} icon={<Bell />} />
+                    <StatCard title="Notifications Sent" value={global?.totalSentNotifications} icon={<Target className="text-green-500" />} />
                 </div>
 
                 {/* User List */}
@@ -185,52 +188,60 @@ export default function WizardPage() {
                     <div className="px-6 py-4 border-b">
                         <h3 className="text-lg font-medium text-gray-900">Users</h3>
                     </div>
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sites</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Popups</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leads</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {users?.map((user: any) => (
-                                <tr key={user._id} className={user.isBlocked ? 'bg-red-50' : ''}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.stats.sites}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.stats.popups}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.stats.leads}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                        {user.isBlocked ? (
-                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                                Blocked
-                                            </span>
-                                        ) : (
-                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                Active
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <button
-                                            onClick={() => toggleBlockStatus(user._id, user.isBlocked, user.name)}
-                                            className={`${user.isBlocked
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sites</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Popups</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leads</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Campaigns</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscribers</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sent Notifs</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {users?.map((user: any) => (
+                                    <tr key={user._id} className={user.isBlocked ? 'bg-red-50' : ''}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.stats.sites}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.stats.popups}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.stats.leads}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.stats.campaigns}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.stats.subscribers || 0}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.stats.sentNotifications || 0}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                            {user.isBlocked ? (
+                                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                                    Blocked
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                    Active
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <button
+                                                onClick={() => toggleBlockStatus(user._id, user.isBlocked, user.name)}
+                                                className={`${user.isBlocked
                                                     ? 'text-green-600 hover:text-green-900'
                                                     : 'text-red-600 hover:text-red-900'
-                                                }`}
-                                        >
-                                            {user.isBlocked ? 'Activate' : 'Block'}
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                                    }`}
+                                            >
+                                                {user.isBlocked ? 'Activate' : 'Block'}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -239,15 +250,15 @@ export default function WizardPage() {
 
 function StatCard({ title, value, icon }: { title: string, value: number, icon: any }) {
     return (
-        <div className="bg-white overflow-hidden rounded-lg shadow p-5">
+        <div className="bg-white overflow-hidden rounded-lg shadow p-5 border border-gray-100">
             <div className="flex items-center">
-                <div className="flex-shrink-0 bg-blue-500 rounded-md p-3 text-white">
+                <div className="flex-shrink-0 bg-blue-600 rounded-lg p-3 text-white shadow-md">
                     {icon}
                 </div>
                 <div className="ml-5 w-0 flex-1">
                     <dl>
                         <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
-                        <dd className="text-3xl font-semibold text-gray-900">{value}</dd>
+                        <dd className="text-2xl font-bold text-gray-900">{value || 0}</dd>
                     </dl>
                 </div>
             </div>

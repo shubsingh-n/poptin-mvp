@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 
-export default function SignupPage() {
+export default function RegisterPage() {
     const router = useRouter();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -141,6 +141,12 @@ export default function SignupPage() {
                                 'Sign up'
                             )}
                         </button>
+                    </div>
+                    <div className="text-center mt-4 text-sm text-gray-600">
+                        Already have an account?{' '}
+                        <Link href="/login" className="text-blue-600 hover:underline font-medium">
+                            Log in
+                        </Link>
                     </div>
                 </form>
             </div>

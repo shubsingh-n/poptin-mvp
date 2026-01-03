@@ -425,24 +425,51 @@
       if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
       const messaging = firebase.messaging();
 
+      console.log('[Popup-Max] Requesting Notification Permission...');
       const permission = await Notification.requestPermission();
+      console.log('[Popup-Max] Permission status:', permission);
+
       if (permission === 'granted') {
-        const token = await messaging.getToken({ vapidKey });
+        let registration;
+        if ('serviceWorker' in navigator) {
+          console.log('[Popup-Max] Registering Service Worker...');
+          registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(err => {
+            console.warn('[Popup-Max] Service Worker registration failed. The file /firebase-messaging-sw.js must be at your root domain.', err);
+            return null;
+          });
+        }
+
+        console.log('[Popup-Max] Getting FCM Token...');
+        const token = await messaging.getToken({
+          vapidKey,
+          serviceWorkerRegistration: registration || undefined
+        });
+        console.log('[Popup-Max] FCM Token received:', token ? token.substring(0, 20) + '...' : 'null');
+
         if (token) {
-          await fetch(`${origin}/api/subscribers`, {
+          console.log('[Popup-Max] Sending token to backend...');
+          const res = await fetch(`${origin}/api/subscribers`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ siteId, token, userAgent: navigator.userAgent }),
           });
-          sessionStorage.setItem(SUBMIT_KEY_PREFIX + config.popupId, 'true');
-          showThankYou(config);
+          const data = await res.json();
+          console.log('[Popup-Max] Backward response:', data);
+
+          if (data.success) {
+            console.log('[Popup-Max] ✅ Subscriber Registered Successfully!');
+            sessionStorage.setItem(SUBMIT_KEY_PREFIX + config.popupId, 'true');
+            showThankYou(config);
+          } else {
+            console.error('[Popup-Max] Failed to save subscriber:', data.error);
+          }
         }
       } else {
-        console.warn('Popup-Max: Permission denied');
+        console.warn('[Popup-Max] Permission denied');
         alert('Permission denied. Please enable notifications in your browser settings.');
       }
     } catch (e) {
-      console.error('Popup-Max: Push registration failed', e);
+      console.error('[Popup-Max] ❌ Push registration error:', e);
     }
   }
 

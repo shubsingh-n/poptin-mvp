@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Edit, Trash2, Copy, MousePointer2, ExternalLink, FlaskConical, Layers, Plus, Split, GripVertical, Bell } from 'lucide-react';
+import { Edit, Trash2, Copy, MousePointer2, ExternalLink, FlaskConical, Layers, Plus, Split, GripVertical, Bell, RefreshCcw } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -110,13 +110,23 @@ function PopupsContent() {
     fetchSites();
   }, []);
 
+  const [selectedSite, setSelectedSite] = useState<Site | null>(null);
+  const [verifying, setVerifying] = useState(false);
+
+  useEffect(() => {
+    fetchSites();
+  }, []);
+
   useEffect(() => {
     if (selectedSiteId) {
       fetchPopups(selectedSiteId);
+      const site = sites.find(s => s.siteId === selectedSiteId);
+      if (site) setSelectedSite(site);
     } else {
       fetchAllPopups();
+      if (sites.length > 0) setSelectedSite(sites[0]);
     }
-  }, [selectedSiteId]);
+  }, [selectedSiteId, sites]);
 
 
 
@@ -303,6 +313,25 @@ function PopupsContent() {
     alert('Embed code copied to clipboard!');
   };
 
+  const handleVerify = async () => {
+    if (!selectedSite) return;
+    setVerifying(true);
+    try {
+      const res = await fetch(`/api/sites/${selectedSite._id}/verify-popup`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        alert('Success! Popup script detected.');
+        fetchSites(); // Refresh site status
+      } else {
+        alert('Verification Failed: ' + data.error);
+      }
+    } catch (e) {
+      alert('Error during verification.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const renderPopupRow = (popup: Popup, isInsideGroup = false) => {
     return (
       <div key={popup._id} className={`flex items-center hover:bg-gray-50 transition-colors ${isInsideGroup ? 'bg-white rounded border border-blue-50/50' : ''}`}>
@@ -332,11 +361,6 @@ function PopupsContent() {
                   <Edit size={14} />
                 </button>
               </div>
-            )}
-            {popup.type === 'notification' && (
-              <span className="ml-2 flex flex-row items-center justify-center p-1 bg-yellow-100 rounded text-yellow-800 text-xs font-medium" title="Push Notification">
-                <Bell size={12} className="mr-1" /> Push
-              </span>
             )}
           </div>
         </div>
@@ -384,15 +408,17 @@ function PopupsContent() {
             </button>
           </div>
         </div>
-      </div >
+      </div>
     );
   };
 
   if (loading) return <div className="text-center py-12">Loading...</div>;
 
+  const showSetup = selectedSite && !(selectedSite as any).isPopupVerified;
+
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mr-4">Popups</h1>
         <Link
           href={`/dashboard/popups/new${selectedSiteId ? `?siteId=${selectedSiteId}` : ''}`}
@@ -400,13 +426,49 @@ function PopupsContent() {
         >
           <span className="text-xl">+</span> Create Popup
         </Link>
-        <Link
-          href={`/dashboard/popups/new${selectedSiteId ? `?siteId=${selectedSiteId}` : ''}&type=notification`}
-          className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2"
-        >
-          <Bell size={18} /> Create Notification
-        </Link>
       </div>
+
+      {showSetup && (
+        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-xl p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
+              <Layers size={24} />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-blue-900 mb-1">Popup Setup Required</h3>
+              <p className="text-blue-800 text-sm mb-4">
+                To show popups on your website, you must embed the script tag into your website's header or footer.
+              </p>
+
+              <div className="bg-white p-4 rounded-lg border border-blue-200 flex items-center justify-between gap-4">
+                <div className="flex-1 font-mono text-xs bg-gray-900 text-blue-400 p-3 rounded-lg border border-gray-800 truncate shadow-inner">
+                  {`<script src="${typeof window !== 'undefined' ? window.location.origin : ''}/popup.js" data-site-id="${selectedSite.siteId}"></script>`}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const code = `<script src="${window.location.origin}/popup.js" data-site-id="${selectedSite.siteId}"></script>`;
+                      navigator.clipboard.writeText(code);
+                      alert('Copied!');
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white rounded hover:bg-black transition-colors text-xs font-medium whitespace-nowrap"
+                  >
+                    <Copy size={14} /> Copy Code
+                  </button>
+                  <button
+                    onClick={handleVerify}
+                    disabled={verifying}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs font-medium whitespace-nowrap disabled:opacity-50"
+                  >
+                    {verifying ? <RefreshCcw size={14} className="animate-spin" /> : <Layers size={14} />}
+                    Verify
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow">
         {popups.length === 0 ? (
@@ -470,7 +532,7 @@ function PopupsContent() {
           </DndContext>
         )}
       </div>
-    </div>
+    </div >
   );
 }
 

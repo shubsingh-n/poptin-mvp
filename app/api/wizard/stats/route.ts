@@ -6,6 +6,8 @@ import Site from '@/models/Site';
 import Popup from '@/models/Popup';
 import Lead from '@/models/Lead';
 import Event from '@/models/Event';
+import Subscriber from '@/models/Subscriber';
+import NotificationCampaign from '@/models/NotificationCampaign';
 
 export async function GET(request: NextRequest) {
     const token = request.cookies.get('wizard_token')?.value;
@@ -29,6 +31,9 @@ export async function GET(request: NextRequest) {
             totalPopups,
             totalLeads,
             totalEvents,
+            totalSubscribers,
+            totalCampaigns,
+            campaignsBatch,
             users
         ] = await Promise.all([
             User.countDocuments(),
@@ -36,27 +41,53 @@ export async function GET(request: NextRequest) {
             Popup.countDocuments(),
             Lead.countDocuments(),
             Event.countDocuments(),
+            Subscriber.countDocuments(),
+            NotificationCampaign.countDocuments(),
+            NotificationCampaign.find(),
             User.find().select('-password').sort({ createdAt: -1 }).lean()
         ]);
 
+        const totalSentNotifications = campaignsBatch.reduce((acc: number, c: any) => acc + (c.sentCount || 0), 0);
+
         // Aggregate stats per user
-        const [sitesByUser, popupsByUser, leadsByUser] = await Promise.all([
+        const [sitesByUser, popupsByUser, leadsByUser, subscribersByUser, campaignsByUser, notificationsSentByUser] = await Promise.all([
             Site.aggregate([{ $group: { _id: '$userId', count: { $sum: 1 } } }]),
             Popup.aggregate([{ $group: { _id: '$userId', count: { $sum: 1 } } }]),
-            Lead.aggregate([{ $group: { _id: '$userId', count: { $sum: 1 } } }])
+            Lead.aggregate([{ $group: { _id: '$userId', count: { $sum: 1 } } }]),
+            // Subscriber count per user (joining with Site)
+            Subscriber.aggregate([
+                {
+                    $lookup: {
+                        from: 'sites',
+                        localField: 'siteId',
+                        foreignField: 'siteId',
+                        as: 'site'
+                    }
+                },
+                { $unwind: '$site' },
+                { $group: { _id: '$site.userId', count: { $sum: 1 } } }
+            ]),
+            NotificationCampaign.aggregate([{ $group: { _id: '$userId', count: { $sum: 1 } } }]),
+            NotificationCampaign.aggregate([{ $group: { _id: '$userId', sentCount: { $sum: '$sentCount' } } }])
         ]);
 
         const usersWithStats = users.map((u: any) => {
             const siteCount = sitesByUser.find(s => s._id?.toString() === u._id.toString())?.count || 0;
             const popupCount = popupsByUser.find(p => p._id?.toString() === u._id.toString())?.count || 0;
             const leadCount = leadsByUser.find(l => l._id?.toString() === u._id.toString())?.count || 0;
+            const campaignCount = campaignsByUser.find(c => c._id?.toString() === u._id.toString())?.count || 0;
+            const subscriberCount = subscribersByUser.find(s => s._id?.toString() === u._id.toString())?.count || 0;
+            const sentCount = notificationsSentByUser.find(n => n._id?.toString() === u._id.toString())?.sentCount || 0;
 
             return {
                 ...u,
                 stats: {
                     sites: siteCount,
                     popups: popupCount,
-                    leads: leadCount
+                    leads: leadCount,
+                    campaigns: campaignCount,
+                    subscribers: subscriberCount,
+                    sentNotifications: sentCount
                 }
             };
         });
@@ -68,7 +99,10 @@ export async function GET(request: NextRequest) {
                 totalSites,
                 totalPopups,
                 totalLeads,
-                totalEvents
+                totalEvents,
+                totalSubscribers,
+                totalCampaigns,
+                totalSentNotifications
             },
             users: usersWithStats
         });
