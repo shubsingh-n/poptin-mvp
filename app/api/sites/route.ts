@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 import connectDB from '@/lib/mongodb';
 import Site from '@/models/Site';
 
@@ -8,8 +10,13 @@ import Site from '@/models/Site';
  */
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
-    const sites = await Site.find({}).sort({ createdAt: -1 });
+    const sites = await Site.find({ userId: (session.user as any).id }).sort({ createdAt: -1 });
     return NextResponse.json({ success: true, data: sites }, { status: 200 });
   } catch (error) {
     console.error('Error fetching sites:', error);
@@ -29,6 +36,11 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
     const body = await request.json();
     const { name, domain } = body;
@@ -48,7 +60,12 @@ export async function POST(request: NextRequest) {
       return `${timestamp}${randomPart1}${randomPart2}`;
     };
 
-    const site = await Site.create({ name, domain, siteId: generateSiteId() });
+    const site = await Site.create({
+      name,
+      domain,
+      siteId: generateSiteId(),
+      userId: (session.user as any).id
+    });
     return NextResponse.json({ success: true, data: site }, { status: 201 });
   } catch (error: any) {
     console.error('Error creating site:', error);

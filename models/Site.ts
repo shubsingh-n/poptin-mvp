@@ -8,12 +8,19 @@ export interface ISite extends Document {
   name: string;
   domain: string;
   siteId: string; // Unique identifier for embed script
+  userId: string; // Owner ID
   createdAt: Date;
   updatedAt: Date;
 }
 
 const SiteSchema: Schema = new Schema(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: false, // Optional temporarily
+      index: true,
+    },
     name: {
       type: String,
       required: [true, 'Site name is required'],
@@ -44,7 +51,7 @@ SiteSchema.pre('validate', function (next) {
     const randomPart1 = Math.random().toString(36).substring(2, 10);
     const randomPart2 = Math.random().toString(36).substring(2, 10);
     this.siteId = `${timestamp}${randomPart1}${randomPart2}`;
-    
+
     // If there's a duplicate (very unlikely), MongoDB's unique constraint will catch it
     // and we'll handle it in the API route with error code 11000
   }

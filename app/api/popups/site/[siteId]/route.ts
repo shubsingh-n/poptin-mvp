@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 import connectDB from '@/lib/mongodb';
 import Popup from '@/models/Popup';
 
@@ -11,8 +13,16 @@ export async function GET(
   { params }: { params: { siteId: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
-    const popups = await Popup.find({ siteId: params.siteId }).sort({
+    const popups = await Popup.find({
+      siteId: params.siteId,
+      userId: (session.user as any).id
+    }).sort({
       createdAt: -1,
     });
 

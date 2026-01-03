@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 import connectDB from '@/lib/mongodb';
 import Popup from '@/models/Popup';
 
@@ -11,8 +13,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
-    const popup = await Popup.findById(params.id);
+    const popup = await Popup.findOne({ _id: params.id, userId: (session.user as any).id });
 
     if (!popup) {
       return NextResponse.json(
@@ -40,13 +47,22 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
     const body = await request.json();
 
-    const popup = await Popup.findByIdAndUpdate(params.id, body, {
-      new: true,
-      runValidators: true,
-    });
+    const popup = await Popup.findOneAndUpdate(
+      { _id: params.id, userId: (session.user as any).id },
+      body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
 
     if (!popup) {
       return NextResponse.json(
@@ -74,8 +90,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
-    const popup = await Popup.findByIdAndDelete(params.id);
+    const popup = await Popup.findOneAndDelete({ _id: params.id, userId: (session.user as any).id });
 
     if (!popup) {
       return NextResponse.json(

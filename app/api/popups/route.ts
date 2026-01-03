@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 import connectDB from '@/lib/mongodb';
 import Popup from '@/models/Popup';
 
@@ -8,11 +10,18 @@ import Popup from '@/models/Popup';
  */
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
     const searchParams = request.nextUrl.searchParams;
     const siteId = searchParams.get('siteId');
 
-    const query = siteId ? { siteId } : {};
+    const query: any = { userId: (session.user as any).id };
+    if (siteId) query.siteId = siteId;
+
     const popups = await Popup.find(query).sort({ createdAt: -1 });
 
     return NextResponse.json({ success: true, data: popups }, { status: 200 });
@@ -36,6 +45,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
     const body = await request.json();
     const {
@@ -64,6 +78,7 @@ export async function POST(request: NextRequest) {
     // Create popup
     const popup = await Popup.create({
       siteId,
+      userId: (session.user as any).id,
       // Legacy fields (optional or defaults)
       title: popupTitle || 'Untitled Popup',
       description: description || '',

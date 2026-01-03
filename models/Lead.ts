@@ -6,7 +6,8 @@ import mongoose, { Schema, Document } from 'mongoose';
  */
 export interface ILead extends Document {
   siteId: string;
-  popupId: string; // Reference to Popup
+  popupId: string;
+  userId: string; // Owner ID
   email?: string;
   data: any;
   createdAt: Date;
@@ -23,6 +24,12 @@ const LeadSchema: Schema = new Schema(
     popupId: {
       type: String,
       required: [true, 'Popup ID is required'],
+      index: true,
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: false, // Optional temporarily
       index: true,
     },
     email: {

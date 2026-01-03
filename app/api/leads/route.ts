@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 import connectDB from '@/lib/mongodb';
 import Lead from '@/models/Lead';
 import Event from '@/models/Event';
@@ -24,12 +26,17 @@ export async function OPTIONS() {
  */
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
     const searchParams = request.nextUrl.searchParams;
     const siteId = searchParams.get('siteId');
     const popupId = searchParams.get('popupId');
 
-    const query: any = {};
+    const query: any = { userId: (session.user as any).id };
     if (siteId) query.siteId = siteId;
     if (popupId) query.popupId = popupId;
 
@@ -76,6 +83,16 @@ export async function POST(request: NextRequest) {
     // Email extracted from top-level or data object
     const emailToSave = email || data?.email || data?.Email || '';
 
+    // Find Popup to get Owner ID
+    const popup = await Popup.findById(popupId);
+    if (!popup) {
+      return NextResponse.json(
+        { success: false, error: 'Popup not found' },
+        { status: 404, headers: corsHeaders }
+      );
+    }
+    const userId = popup.userId;
+
     let lead;
     if (leadId) {
       // UPDATE existing lead for multi-step continuity
@@ -86,14 +103,18 @@ export async function POST(request: NextRequest) {
           lead.data = { ...(lead.data || {}), ...data };
           lead.markModified('data');
         }
+        // Ensure userId is set if missing
+        if (!lead.userId && userId) {
+          lead.userId = userId;
+        }
         await lead.save();
       } else {
         // Fallback: create if provided leadId is not found
-        lead = await Lead.create({ siteId, popupId, email: emailToSave, data });
+        lead = await Lead.create({ siteId, popupId, userId, email: emailToSave, data });
       }
     } else {
       // ALWAYS CREATE new lead if no leadId (new session/attempt)
-      lead = await Lead.create({ siteId, popupId, email: emailToSave, data });
+      lead = await Lead.create({ siteId, popupId, userId, email: emailToSave, data });
     }
 
     // Track conversion event and increment stats ONLY on first creation
@@ -123,9 +144,13 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     await connectDB();
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { ids } = body;
-
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Lead IDs are required' },
@@ -133,7 +158,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const result = await Lead.deleteMany({ _id: { $in: ids } });
+    const result = await Lead.deleteMany({ _id: { $in: ids }, userId: (session.user as any).id });
 
     return NextResponse.json(
       { success: true, deletedCount: result.deletedCount },

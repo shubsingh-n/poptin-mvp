@@ -9,6 +9,7 @@ export type EventType = 'view' | 'conversion' | 'visit';
 export interface IEvent extends Document {
   siteId: string;
   popupId: string;
+  userId: string; // Owner ID
   type: EventType;
   createdAt: Date;
 }
@@ -23,6 +24,12 @@ const EventSchema: Schema = new Schema(
     popupId: {
       type: String,
       required: [true, 'Popup ID is required'],
+      index: true,
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: false, // Optional temporarily
       index: true,
     },
     type: {

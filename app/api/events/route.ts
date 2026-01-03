@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 import connectDB from '@/lib/mongodb';
 import Event from '@/models/Event';
 import Popup from '@/models/Popup';
@@ -23,13 +25,18 @@ export async function OPTIONS() {
  */
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
     const searchParams = request.nextUrl.searchParams;
     const siteId = searchParams.get('siteId');
     const popupId = searchParams.get('popupId');
     const type = searchParams.get('type');
 
-    const query: any = {};
+    const query: any = { userId: (session.user as any).id };
     if (siteId) query.siteId = siteId;
     if (popupId) query.popupId = popupId;
     if (type) query.type = type;
@@ -70,7 +77,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const event = await Event.create({ siteId, popupId, type });
+    // Lookup Popup to get userId
+    const popup = await Popup.findById(popupId);
+    if (!popup) {
+      return NextResponse.json(
+        { success: false, error: 'Popup not found' },
+        { status: 404, headers: corsHeaders }
+      );
+    }
+
+    const event = await Event.create({
+      siteId,
+      popupId,
+      type,
+      userId: popup.userId
+    });
 
     // Increment pre-aggregated counters for performance
     try {

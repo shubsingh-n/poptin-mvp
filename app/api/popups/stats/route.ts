@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
 import connectDB from '@/lib/mongodb';
 import Popup from '@/models/Popup';
 
 export async function GET(request: NextRequest) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user) {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+
         const { searchParams } = new URL(request.url);
         const siteId = searchParams.get('siteId');
 
@@ -13,8 +20,8 @@ export async function GET(request: NextRequest) {
 
         await connectDB();
 
-        // Fetch all popups for the site and return their pre-aggregated stats
-        const popups = await Popup.find({ siteId }, '_id stats');
+        // Fetch all popups for the site BELONGING TO THIS USER
+        const popups = await Popup.find({ siteId, userId: (session.user as any).id }, '_id stats');
 
         const formattedStats: any = {};
         popups.forEach(popup => {

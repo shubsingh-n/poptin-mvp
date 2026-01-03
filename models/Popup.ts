@@ -6,6 +6,7 @@ import mongoose, { Schema, Document } from 'mongoose';
  */
 export interface IPopup extends Document {
   siteId: string;
+  userId: string; // Owner ID
   // Legacy
   title?: string;
   description?: string;
@@ -86,6 +87,12 @@ const PopupSchema: Schema = new Schema(
     siteId: {
       type: String,
       required: [true, 'Site ID is required'],
+      index: true,
+    },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: false, // Optional temporarily
       index: true,
     },
     // Legacy fields - kept for backward compatibility but might be unused in new editor
